@@ -10,7 +10,7 @@ let transporter = nodemailer.createTransport({
 	service :'gmail',
 	auth: {
 		user:'intern.skript@gmail.com',
-		pass: 'intern_skript1',
+		pass: '*********',
 	}
 });
 exports.createUser = functions.firestore
