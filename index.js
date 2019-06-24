@@ -10,48 +10,65 @@ let transporter = nodemailer.createTransport({
 	service :'gmail',
 	auth: {
 		user:'intern.skript@gmail.com',
-		pass: '*********',
+		pass: 'intern_skript1',
 	}
 });
 exports.createUser = functions.firestore
-    .document('Leave/{LeaveId}')
+    .document('leaveApplications/{LeaveId}')
     .onCreate((snap, context) => {
       const newValue = snap.data();
       const user=newValue['email'];
       const id=newValue['uid'];
-      console.log("mail sent");
+      console.log(id);
       return sendEmail(id);
       
     });
 
-getMailList =() => {
+getMailList =(id) => {
   console.log("inside get maillist");
   let mail=[];
   let maillist=[];
   return db.collection('users').doc(id).get()
     .then(member => {
-  return db.collection('users').doc(member.data().alignedId).get()
+      console.log(member.data().managerId)
+  return db.collection('users').doc(member.data().managerId).get()
     .then(manager => {
   return db.collection('users').where("organizations","==","gmail").get()
-    .then(admin => {
-      console.log(admin.data());
-      maillist.push(`${manager.data().email}`)
-      console.log(maillist);
-      maillist.push(`${admin.data().email}`)
-      console.log(maillist);
-      for(var m = 0; m < maillist.length; m++) {
-        const mailOptions = {
-          from: '<intern.skript@gmail.com>',
-          to: maillist[m],
-          subject: 'test',
-          text : 'it works'
-        }
-      }       
-      return(mailOptions)     
+    .then((querySnapshot)=> {
+      querySnapshot.forEach(function(admin) {
+        if(admin.data().role ===1){
+          console.log("inside role =1")
+          console.log(admin.data());
+          maillist.push(`${admin.data().email}`)
+          maillist.push(`${manager.data().email}`)
+          console.log(maillist.length)
+           for(var m = 1; m < maillist.length; m++) {
+              console.log(maillist[m])
+             var mailOptions = {
+              from: '<intern.skript@gmail.com>',
+              to: maillist[m],
+              subject: 'test',
+              html: '<p>Click <a href="http://localhost:3000/signIn">here</p>'
+
+            }
+          }       
+            return transporter.sendMail(mailOptions)
+            .then(() => console.log('email sent'))
+            .catch((error) => console.error('There was an error while sending the email:', error));               
+      }
+
     })  
+      return;
     })
     })
+  })
 }
+
+function sendEmail(id) {
+            maillist= getMailList(id)
+            console.log(maillist)
+           
+  }
 const getLeavesLeft = () => {
   let leavesLeft= 0;
    return db.collection("organizations").doc("skcript").get()
@@ -77,8 +94,6 @@ const getUser = (userId) => {
     return response.data.user.profile.email;
   })
 }
-
- 
 
 var fulfillmentTextResponse = (message) =>{
   return {
@@ -139,8 +154,8 @@ const doAction = (body) => {
     console.log("leave req")
     var params =body.queryResult.outputContexts[0].parameters
     console.log(params)
-    startDate = params.date_period.startDate
-    endDate = params.date_period.endDate
+    startDate = new Date(params.date_period.startDate).getTime()
+    endDate = new Date(params.date_period.endDate).getTime()
     leave_reason = params.leave_reason
     console.log(startDate)
     return getUser(userId)
@@ -185,13 +200,7 @@ exports.webhook = functions.https.onRequest((req, res) => {
          });
 });
 
-function sendEmail(id) {
-            var mailOptions= getMailList()
-            return transporter.sendMail(mailOptions)
-            .then(() => console.log('email sent'))
-            .catch((error) => console.error('There was an error while sending the email:', error)); 
-         
-  }
+
 
 
 
